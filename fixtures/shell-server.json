@@ -1,0 +1,19 @@
+{
+  "name": "shell-server",
+  "description": "Local command runner.",
+  "tools": [
+    {
+      "name": "exec_command",
+      "description": "Execute shell commands through bash or zsh.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "command": {
+            "type": "string"
+          }
+        },
+        "required": ["command"]
+      }
+    }
+  ]
+}
