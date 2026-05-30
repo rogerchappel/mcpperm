@@ -22,6 +22,7 @@
     "check": "tsc -p tsconfig.json --noEmit",
     "pretest": "npm run build",
     "test": "node --test dist/test/*.test.js",
+    "smoke": "npm run package:smoke",
     "package:smoke": "npm pack --dry-run",
     "release:check": "npm run check && npm test && npm run package:smoke"
   },
