@@ -1,0 +1,39 @@
+{
+  "name": "filesystem-server",
+  "description": "Workspace file helper.",
+  "capabilities": {
+    "tools": {}
+  },
+  "tools": [
+    {
+      "name": "read_workspace_file",
+      "description": "Read a file from the local workspace.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Local filesystem path"
+          }
+        },
+        "required": ["path"]
+      }
+    },
+    {
+      "name": "write_workspace_file",
+      "description": "Write or delete files in the local workspace.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "contents": {
+            "type": "string"
+          }
+        },
+        "required": ["path", "contents"]
+      }
+    }
+  ]
+}

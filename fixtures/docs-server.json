@@ -1,0 +1,19 @@
+{
+  "name": "docs-server",
+  "description": "Read-only documentation lookup server.",
+  "capabilities": ["tools"],
+  "tools": [
+    {
+      "name": "search_docs",
+      "description": "Search public documentation by query.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  ]
+}
