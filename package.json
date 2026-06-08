@@ -34,7 +34,7 @@
     "cli",
     "policy"
   ],
-  "author": "StackForge User",
+  "author": "Roger Chappel",
   "license": "MIT",
   "engines": {
     "node": ">=20"
@@ -42,5 +42,13 @@
   "devDependencies": {
     "@types/node": "^22.15.29",
     "typescript": "^5.8.3"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rogerchappel/mcpperm.git"
+  },
+  "bugs": {
+    "url": "https://github.com/rogerchappel/mcpperm/issues"
+  },
+  "homepage": "https://github.com/rogerchappel/mcpperm#readme"
 }
