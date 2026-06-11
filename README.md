@@ -119,6 +119,13 @@ bash scripts/validate.sh
 
 `scripts/validate.sh` runs the repository's standard local checks when they are defined and also runs `agent-qc ready` when `agent-qc` is installed. Missing `agent-qc` is treated as a skip.
 
+## Package contents
+
+The npm package allowlist includes the runtime files plus the public support
+documents needed for release review: `README.md`, `LICENSE`, `SECURITY.md`, `CHANGELOG.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`.
+Run `npm run package:smoke` or `npm pack --dry-run` before publishing to
+confirm those files are still present in the tarball.
+
 ## Security
 
 `mcpperm` is a static heuristic tool. It does not execute MCP servers and should be used alongside code review, dependency review, and sandboxing. Report vulnerabilities through the process in [SECURITY.md](SECURITY.md).
