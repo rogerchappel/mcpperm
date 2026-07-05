@@ -44,6 +44,11 @@ Compare two generated policies:
 mcpperm diff old.policy.json new.policy.json
 ```
 
+A complete local policy-diff walkthrough is available in
+[`examples/policy-diff.md`](examples/policy-diff.md). It generates policies
+from the packaged `docs-server` and `messaging-server` fixtures, then shows the
+permission expansion reviewers should inspect before enabling messaging tools.
+
 Fail CI when high-risk permissions are detected:
 
 ```sh
@@ -122,9 +127,15 @@ bash scripts/validate.sh
 ## Package contents
 
 The npm package allowlist includes the runtime files plus the public support
-documents needed for release review: `README.md`, `LICENSE`, `SECURITY.md`, `CHANGELOG.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`.
-Run `npm run package:smoke` or `npm pack --dry-run` before publishing to
-confirm those files are still present in the tarball.
+documents needed for release review: `README.md`, `LICENSE`, `SECURITY.md`,
+`CHANGELOG.md`, `CONTRIBUTING.md`, and `CODE_OF_CONDUCT.md`. It also includes
+the fixtures and `examples/policy-diff.md` so package users can reproduce the
+core permission-review workflow.
+
+Run `npm run package:smoke` before publishing. The package smoke builds the
+project, runs `npm pack --dry-run --json`, and fails if the CLI entrypoint,
+library entrypoint, fixtures, example, or support docs are missing from the
+tarball.
 
 ## Security
 
