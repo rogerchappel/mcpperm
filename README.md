@@ -159,3 +159,7 @@ npm run release:check
 ```
 
 Use `npm run package:smoke` or `npm pack --dry-run` to confirm the published tarball includes the support docs and runnable package contents.
+
+## Limitations
+
+mcpperm works from local MCP configuration and fixture data. It does not contact live MCP servers or verify provider-side permissions, so treat its output as a preflight review aid rather than an authorization decision.
