@@ -49,14 +49,30 @@ function extractTools(raw: unknown): ManifestTool[] {
   for (const candidate of candidateLists) {
     const records = asRecordArray(candidate);
     if (records.length > 0) {
-      return records
+      const invalidIndexes = records
+        .map((tool, index) => (asString(tool.name) ?? asString(tool.id) ? undefined : index))
+        .filter((index): index is number => index !== undefined);
+      if (invalidIndexes.length > 0) {
+        throw new Error(
+          `Manifest tools must define a non-empty name or id; invalid tools at indexes ${invalidIndexes.join(", ")}.`
+        );
+      }
+
+      const tools = records
         .map((tool) => ({
-          name: asString(tool.name) ?? asString(tool.id) ?? "unnamed-tool",
+          name: (asString(tool.name) ?? asString(tool.id))!,
           description: asString(tool.description),
           inputSchema: tool.inputSchema ?? tool.input_schema ?? tool.schema,
           annotations: isRecord(tool.annotations) ? tool.annotations : undefined
         }))
         .sort((a, b) => a.name.localeCompare(b.name));
+
+      const duplicateName = tools.find((tool, index) => index > 0 && tool.name === tools[index - 1]?.name)?.name;
+      if (duplicateName) {
+        throw new Error(`Manifest tool names must be unique; duplicate name "${duplicateName}".`);
+      }
+
+      return tools;
     }
   }
 
