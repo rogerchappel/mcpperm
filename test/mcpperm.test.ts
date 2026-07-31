@@ -45,6 +45,25 @@ test("generatePolicy emits deny-by-default tool permissions", async () => {
   assert.equal(policy.tools.read_mentions?.permissions.messaging.risk, "medium");
 });
 
+test("normalizeManifest rejects duplicate and ambiguous tool identities", () => {
+  assert.throws(
+    () => normalizeManifest({ tools: [{ name: "same" }, { id: "same" }] }),
+    /Manifest tool names must be unique; duplicate name "same"/
+  );
+
+  assert.throws(
+    () => normalizeManifest({ tools: [{ description: "first" }, { description: "second" }] }),
+    /Manifest tools must define a non-empty name or id; invalid tools at indexes 0, 1/
+  );
+});
+
+test("generatePolicy refuses duplicate tool identities in library summaries", () => {
+  const summary = inspectManifest(normalizeManifest({ tools: [{ name: "same" }] }));
+  summary.tools.push({ ...summary.tools[0]! });
+
+  assert.throws(() => generatePolicy(summary), /Permission summary tool names must be unique; duplicate name "same"/);
+});
+
 test("diffPolicies reports added tools and permission expansion", async () => {
   const docsPolicy = generatePolicy(inspectManifest(await loadFixture("docs-server.json")), "2026-05-31T00:00:00.000Z");
   const messagingPolicy = generatePolicy(
