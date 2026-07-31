@@ -33,8 +33,14 @@ function emptyPermission(): PolicyPermission {
 
 export function generatePolicy(summary: PermissionSummary, generatedAt = new Date().toISOString()): PermissionPolicy {
   const tools: Record<string, PolicyTool> = {};
+  const seenToolNames = new Set<string>();
 
   for (const tool of summary.tools) {
+    if (seenToolNames.has(tool.name)) {
+      throw new Error(`Permission summary tool names must be unique; duplicate name "${tool.name}".`);
+    }
+    seenToolNames.add(tool.name);
+
     const permissions = Object.fromEntries(categories.map((category) => [category, emptyPermission()])) as PolicyTool["permissions"];
 
     for (const finding of tool.findings) {

@@ -68,6 +68,14 @@ mcpperm inspect fixtures/shell-server.json --fail-on-high
 
 The profiler is intentionally conservative. It can flag false positives, and it cannot prove a manifest is truthful.
 
+## Manifest Tool Identity
+
+Every tool must define a non-empty `name` or `id`, and the resolved values must
+be unique within the manifest. `name` takes precedence when both fields are
+present. The `inspect` and `policy` commands reject missing or duplicate tool
+identities instead of silently merging tools into one policy entry; the library
+applies the same validation during normalization and policy generation.
+
 ## Example Output
 
 ```text
