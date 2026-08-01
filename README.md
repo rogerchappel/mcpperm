@@ -38,6 +38,9 @@ Generate a least-privilege policy:
 mcpperm policy fixtures/shell-server.json --output mcpperm.policy.json
 ```
 
+The output path must be distinct from the input manifest; `mcpperm` rejects
+equivalent resolved paths before writing so the source manifest is preserved.
+
 Compare two generated policies:
 
 ```sh
@@ -54,6 +57,10 @@ Fail CI when high-risk permissions are detected:
 ```sh
 mcpperm inspect fixtures/shell-server.json --fail-on-high
 ```
+
+Each command validates its documented positional argument count and rejects
+unknown options with a non-zero exit status. Supported options may appear
+before or after positional arguments.
 
 ## Risk Categories
 

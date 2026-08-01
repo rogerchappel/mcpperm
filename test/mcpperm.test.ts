@@ -101,6 +101,42 @@ test("CLI writes policies and fails on high risk when requested", async () => {
   }
 });
 
+test("CLI rejects an output path that aliases its policy input without modifying it", async () => {
+  const workspace = await mkdtemp(join(tmpdir(), "mcpperm-alias-"));
+  const inputPath = join(workspace, "manifest.json");
+  const original = await readFile("fixtures/filesystem-server.json", "utf8");
+
+  try {
+    await writeFile(inputPath, original);
+    await assert.rejects(
+      execFileAsync("node", ["dist/src/cli.js", "policy", inputPath, "--output", join(workspace, ".", "manifest.json")]),
+      (error: unknown) => {
+        assert.match((error as { stderr: string }).stderr, /--output must not resolve to the policy input file/);
+        return true;
+      }
+    );
+    assert.equal(await readFile(inputPath, "utf8"), original);
+  } finally {
+    await rm(workspace, { recursive: true, force: true });
+  }
+});
+
+test("CLI rejects unknown options and surplus command arguments", async () => {
+  const cases = [
+    ["inspect", "fixtures/filesystem-server.json", "--bogus"],
+    ["policy", "fixtures/filesystem-server.json", "extra.json"],
+    ["diff", "old.json", "new.json", "extra.json"]
+  ];
+
+  for (const args of cases) {
+    await assert.rejects(execFileAsync("node", ["dist/src/cli.js", ...args]), (error: unknown) => {
+      assert.equal((error as { code?: number }).code, 1);
+      assert.match((error as { stderr: string }).stderr, /Unknown option|accepts exactly/);
+      return true;
+    });
+  }
+});
+
 test("CLI prints policy drift", async () => {
   const workspace = await mkdtemp(join(tmpdir(), "mcpperm-diff-"));
   const oldPath = join(workspace, "old.json");

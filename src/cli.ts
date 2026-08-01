@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-import { writeFile } from "node:fs/promises";
+import { realpath, writeFile } from "node:fs/promises";
+import { basename, dirname, join } from "node:path";
 import { diffPolicies, formatPolicyDiff, generatePolicy } from "./policy.js";
 import { formatSummary, inspectManifest } from "./risk.js";
 import { normalizeManifest, readJsonInput } from "./manifest.js";
@@ -63,6 +64,10 @@ function parseArgs(argv: string[]): { command?: string; positional: string[]; op
       return { positional: ["help"], options };
     }
 
+    if (arg.startsWith("-")) {
+      throw new Error(`Unknown option: ${arg}`);
+    }
+
     positional.push(arg);
   }
 
@@ -71,6 +76,23 @@ function parseArgs(argv: string[]): { command?: string; positional: string[]; op
     positional: positional.slice(1),
     options
   };
+}
+
+function requireArgumentCount(command: string, positional: string[], expected: number, signature: string): void {
+  if (positional.length < expected) {
+    throw new Error(`${command} requires ${signature}.`);
+  }
+  if (positional.length > expected) {
+    throw new Error(`${command} accepts exactly ${signature}; received ${positional.length} arguments.`);
+  }
+}
+
+async function resolvedPath(path: string): Promise<string> {
+  try {
+    return await realpath(path);
+  } catch {
+    return join(await realpath(dirname(path)), basename(path));
+  }
 }
 
 async function loadManifestSummary(input: string) {
@@ -87,10 +109,9 @@ async function run(argv: string[]): Promise<number> {
   }
 
   if (command === "inspect") {
+    requireArgumentCount("inspect", positional, 1, "<manifest-or-json>");
     const input = positional[0];
-    if (!input) {
-      throw new Error("inspect requires <manifest-or-json>.");
-    }
+    if (!input) throw new Error("inspect requires <manifest-or-json>.");
 
     const summary = await loadManifestSummary(input);
     process.stdout.write(options.json ? `${JSON.stringify(summary, null, 2)}\n` : formatSummary(summary));
@@ -98,9 +119,14 @@ async function run(argv: string[]): Promise<number> {
   }
 
   if (command === "policy") {
+    requireArgumentCount("policy", positional, 1, "<manifest-or-json>");
     const input = positional[0];
-    if (!input) {
-      throw new Error("policy requires <manifest-or-json>.");
+    if (!input) throw new Error("policy requires <manifest-or-json>.");
+
+    if (options.output && !input.trim().startsWith("{") && !input.trim().startsWith("[")) {
+      if ((await resolvedPath(input)) === (await resolvedPath(options.output))) {
+        throw new Error("--output must not resolve to the policy input file.");
+      }
     }
 
     const summary = await loadManifestSummary(input);
@@ -117,6 +143,7 @@ async function run(argv: string[]): Promise<number> {
   }
 
   if (command === "diff") {
+    requireArgumentCount("diff", positional, 2, "<old-policy> <new-policy>");
     const [oldPath, newPath] = positional;
     if (!oldPath || !newPath) {
       throw new Error("diff requires <old-policy> <new-policy>.");
