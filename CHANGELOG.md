@@ -9,6 +9,7 @@ format and uses semantic versioning when versioned releases are published.
 
 ### Added
 
+- Added policy-diff reporting for risk changes on permissions that remain allowed.
 - Added a packaged policy-diff walkthrough for docs-to-messaging permission review.
 - Added package smoke validation for runtime files, fixtures, examples, and support docs.
 - Added a script-backed release smoke covering inspect, policy generation, and policy diff.
