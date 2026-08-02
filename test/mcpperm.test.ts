@@ -80,6 +80,55 @@ test("diffPolicies reports added tools and permission expansion", async () => {
   assert.ok(drifts.some((drift) => drift.message === "Tool added: send_slack_message (high)"));
 });
 
+test("diffPolicies reports permission risk changes without duplicating allowed-state drift", () => {
+  const basePermission = { allowed: false, risk: "none" as const, reasons: [] };
+  const policy = (filesystem: { allowed: boolean; risk: "low" | "medium" | "high" | "none"; reasons: string[] }) => ({
+    schemaVersion: "mcpperm.policy.v1" as const,
+    generatedAt: "2026-05-31T00:00:00.000Z",
+    manifest: { name: "risk-diff" },
+    defaultAction: "deny" as const,
+    reviewRequired: true,
+    tools: {
+      workspace: {
+        allowed: true,
+        risk: "high" as const,
+        reviewRequired: true,
+        permissions: {
+          filesystem,
+          shell: { allowed: true, risk: "high" as const, reasons: ["executes commands"] },
+          network: basePermission,
+          browser: basePermission,
+          credentials: basePermission,
+          messaging: basePermission
+        }
+      }
+    }
+  });
+
+  const medium = policy({ allowed: true, risk: "medium", reasons: ["reads files"] });
+  const high = policy({ allowed: true, risk: "high", reasons: ["writes files"] });
+
+  assert.deepEqual(diffPolicies(medium, high), [
+    {
+      type: "permission-risk-changed",
+      risk: "high",
+      message: "Permission risk changed: workspace filesystem medium -> high"
+    }
+  ]);
+  assert.deepEqual(diffPolicies(high, medium), [
+    {
+      type: "permission-risk-changed",
+      risk: "low",
+      message: "Permission risk changed: workspace filesystem high -> medium"
+    }
+  ]);
+  assert.deepEqual(
+    diffPolicies(medium, policy({ allowed: true, risk: "medium", reasons: ["reads workspace files"] })),
+    []
+  );
+  assert.deepEqual(diffPolicies(medium, medium), []);
+});
+
 test("CLI writes policies and fails on high risk when requested", async () => {
   const workspace = await mkdtemp(join(tmpdir(), "mcpperm-test-"));
   const policyPath = join(workspace, "policy.json");
@@ -152,6 +201,39 @@ test("CLI prints policy drift", async () => {
 
     assert.match(stdout, /\[high\] Tool added: exec_command \(high\)/);
     assert.match(stdout, /\[low\] Tool removed: search_docs/);
+  } finally {
+    await rm(workspace, { recursive: true, force: true });
+  }
+});
+
+test("CLI emits permission risk drift as text and JSON and fails on high risk", async () => {
+  const workspace = await mkdtemp(join(tmpdir(), "mcpperm-risk-diff-"));
+  const oldPath = join(workspace, "old.json");
+  const newPath = join(workspace, "new.json");
+  const policy = generatePolicy(inspectManifest(await loadFixture("filesystem-server.json")), "2026-05-31T00:00:00.000Z");
+  const tool = Object.values(policy.tools).find((candidate) => candidate.permissions.filesystem.allowed)!;
+  tool.risk = "high";
+  tool.reviewRequired = true;
+  tool.permissions.filesystem = { allowed: true, risk: "medium", reasons: ["reads files"] };
+
+  try {
+    await writeFile(oldPath, `${JSON.stringify(policy, null, 2)}\n`);
+    tool.permissions.filesystem = { allowed: true, risk: "high", reasons: ["writes files"] };
+    await writeFile(newPath, `${JSON.stringify(policy, null, 2)}\n`);
+
+    const { stdout } = await execFileAsync("node", ["dist/src/cli.js", "diff", oldPath, newPath]);
+    assert.match(stdout, /\[high\] Permission risk changed: .* filesystem medium -> high/);
+
+    const json = await execFileAsync("node", ["dist/src/cli.js", "diff", oldPath, newPath, "--json"]);
+    assert.equal(JSON.parse(json.stdout)[0].type, "permission-risk-changed");
+
+    await assert.rejects(
+      execFileAsync("node", ["dist/src/cli.js", "diff", oldPath, newPath, "--fail-on-high"]),
+      (error: unknown) => {
+        assert.equal((error as { code?: number }).code, 2);
+        return true;
+      }
+    );
   } finally {
     await rm(workspace, { recursive: true, force: true });
   }

@@ -47,6 +47,12 @@ Compare two generated policies:
 mcpperm diff old.policy.json new.policy.json
 ```
 
+Policy diffs report tool changes, permission additions/removals, and risk
+changes for permissions that remain allowed. Risk increases retain their new
+risk level, so `diff --fail-on-high` exits 2 for a medium-to-high escalation;
+use `--json` for deterministic structured output. Changes to explanatory
+`reasons` alone are not treated as permission drift.
+
 A complete local policy-diff walkthrough is available in
 [`examples/policy-diff.md`](examples/policy-diff.md). It generates policies
 from the packaged `docs-server` and `messaging-server` fixtures, then shows the

@@ -87,7 +87,13 @@ export interface PermissionPolicy {
 }
 
 export interface PolicyDrift {
-  type: "tool-added" | "tool-removed" | "permission-added" | "permission-removed" | "risk-changed";
+  type:
+    | "tool-added"
+    | "tool-removed"
+    | "permission-added"
+    | "permission-removed"
+    | "risk-changed"
+    | "permission-risk-changed";
   risk: RiskLevel;
   message: string;
 }

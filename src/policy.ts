@@ -153,6 +153,14 @@ export function diffPolicies(oldValue: unknown, newValue: unknown): PolicyDrift[
           message: `Permission removed: ${toolName} ${category}`
         });
       }
+
+      if (oldPermission.allowed && newPermission.allowed && oldPermission.risk !== newPermission.risk) {
+        drifts.push({
+          type: "permission-risk-changed",
+          risk: driftRisk(oldPermission.risk, newPermission.risk),
+          message: `Permission risk changed: ${toolName} ${category} ${oldPermission.risk} -> ${newPermission.risk}`
+        });
+      }
     }
   }
 
