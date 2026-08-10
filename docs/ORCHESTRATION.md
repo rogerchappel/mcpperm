@@ -19,6 +19,10 @@ ReleaseBox is configured in `releasebox.config.json` for a reviewed Node CLI rel
 
 Pull requests that affect release metadata run `.github/workflows/release-dry-run.yml`, which installs ReleaseBox, checks readiness, runs release checks, and previews generated release notes.
 
+For tag releases, the tag must exactly equal `v` plus the `version` from
+`package.json`. The release job validates this relationship before packaging;
+the dry-run workflow exercises the same check with the current package version.
+
 ## Review Expectations
 
 Each pull request should include:
