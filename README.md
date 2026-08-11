@@ -137,6 +137,15 @@ Run the full local release check:
 npm run release:check
 ```
 
+Release tags must exactly equal `v` followed by the `version` in
+`package.json` (for example, package version `0.1.0` requires tag `v0.1.0`).
+The release workflow checks this invariant before packing the package or
+creating the GitHub release. You can exercise the same guard locally:
+
+```sh
+node scripts/check-release-tag.mjs --tag v0.1.0 --version 0.1.0
+```
+
 Run repository validation:
 
 ```sh
