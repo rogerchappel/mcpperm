@@ -69,17 +69,75 @@ export function generatePolicy(summary: PermissionSummary, generatedAt = new Dat
   };
 }
 
-function readPolicy(value: unknown): PermissionPolicy {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    throw new Error("Policy must be a JSON object.");
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function requireObject(value: unknown, path: string): Record<string, unknown> {
+  if (!isObject(value)) {
+    throw new Error(`${path} must be a JSON object.`);
+  }
+  return value;
+}
+
+function requireBoolean(value: unknown, path: string): void {
+  if (typeof value !== "boolean") {
+    throw new Error(`${path} must be a boolean.`);
+  }
+}
+
+function requireRisk(value: unknown, path: string, allowNone: boolean): void {
+  const values = allowNone ? ["none", "low", "medium", "high"] : ["low", "medium", "high"];
+  if (!values.includes(value as string)) {
+    throw new Error(`${path} must be one of ${values.join(", ")}.`);
+  }
+}
+
+function readPolicy(value: unknown, label: "Old policy" | "New policy"): PermissionPolicy {
+  const policy = requireObject(value, label);
+  if (policy.schemaVersion !== "mcpperm.policy.v1") {
+    throw new Error(`${label} must use schemaVersion mcpperm.policy.v1.`);
+  }
+  if (typeof policy.generatedAt !== "string") {
+    throw new Error(`${label} generatedAt must be a string.`);
   }
 
-  const policy = value as PermissionPolicy;
-  if (policy.schemaVersion !== "mcpperm.policy.v1" || typeof policy.tools !== "object" || policy.tools === null) {
-    throw new Error("Policy must use schemaVersion mcpperm.policy.v1.");
+  const manifest = requireObject(policy.manifest, `${label} manifest`);
+  if (typeof manifest.name !== "string" || manifest.name.trim() === "") {
+    throw new Error(`${label} manifest.name must be a non-empty string.`);
+  }
+  if (manifest.description !== undefined && typeof manifest.description !== "string") {
+    throw new Error(`${label} manifest.description must be a string when provided.`);
+  }
+  if (policy.defaultAction !== "deny") {
+    throw new Error(`${label} defaultAction must be "deny".`);
+  }
+  requireBoolean(policy.reviewRequired, `${label} reviewRequired`);
+
+  const tools = requireObject(policy.tools, `${label} tools`);
+  for (const [toolName, toolValue] of Object.entries(tools)) {
+    if (toolName.trim() === "") {
+      throw new Error(`${label} tool names must be non-empty strings.`);
+    }
+    const toolPath = `${label} tools.${toolName}`;
+    const tool = requireObject(toolValue, toolPath);
+    requireBoolean(tool.allowed, `${toolPath}.allowed`);
+    requireRisk(tool.risk, `${toolPath}.risk`, false);
+    requireBoolean(tool.reviewRequired, `${toolPath}.reviewRequired`);
+
+    const permissions = requireObject(tool.permissions, `${toolPath}.permissions`);
+    for (const category of categories) {
+      const permissionPath = `${toolPath}.permissions.${category}`;
+      const permission = requireObject(permissions[category], permissionPath);
+      requireBoolean(permission.allowed, `${permissionPath}.allowed`);
+      requireRisk(permission.risk, `${permissionPath}.risk`, true);
+      if (!Array.isArray(permission.reasons) || !permission.reasons.every((reason) => typeof reason === "string")) {
+        throw new Error(`${permissionPath}.reasons must be an array of strings.`);
+      }
+    }
   }
 
-  return policy;
+  return policy as unknown as PermissionPolicy;
 }
 
 function driftRisk(oldRisk: RiskLevel | "none", newRisk: RiskLevel | "none"): RiskLevel {
@@ -95,8 +153,8 @@ function driftRisk(oldRisk: RiskLevel | "none", newRisk: RiskLevel | "none"): Ri
 }
 
 export function diffPolicies(oldValue: unknown, newValue: unknown): PolicyDrift[] {
-  const oldPolicy = readPolicy(oldValue);
-  const newPolicy = readPolicy(newValue);
+  const oldPolicy = readPolicy(oldValue, "Old policy");
+  const newPolicy = readPolicy(newValue, "New policy");
   const drifts: PolicyDrift[] = [];
   const toolNames = [...new Set([...Object.keys(oldPolicy.tools), ...Object.keys(newPolicy.tools)])].sort();
 

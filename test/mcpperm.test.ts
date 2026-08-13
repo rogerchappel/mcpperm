@@ -129,6 +129,48 @@ test("diffPolicies reports permission risk changes without duplicating allowed-s
   assert.deepEqual(diffPolicies(medium, medium), []);
 });
 
+test("diffPolicies rejects malformed nested policy fields with context", () => {
+  const valid = generatePolicy(
+    inspectManifest(normalizeManifest({ name: "valid", tools: [{ name: "read_file", description: "Read a file" }] })),
+    "2026-05-31T00:00:00.000Z"
+  );
+  const malformedCases: Array<[string, unknown, RegExp]> = [
+    ["missing permissions", { ...valid, tools: { read_file: { allowed: true, risk: "medium", reviewRequired: false } } }, /Old policy tools\.read_file\.permissions must be a JSON object/],
+    ["invalid tool risk", { ...valid, tools: { read_file: { ...valid.tools.read_file, risk: "critical" } } }, /Old policy tools\.read_file\.risk must be one of low, medium, high/],
+    ["invalid permission reasons", { ...valid, tools: { read_file: { ...valid.tools.read_file, permissions: { ...valid.tools.read_file!.permissions, filesystem: { allowed: true, risk: "medium", reasons: [7] } } } } }, /Old policy tools\.read_file\.permissions\.filesystem\.reasons must be an array of strings/],
+    ["invalid manifest", { ...valid, manifest: { name: 42 } }, /Old policy manifest\.name must be a non-empty string/]
+  ];
+
+  for (const [name, malformed, expected] of malformedCases) {
+    assert.throws(() => diffPolicies(malformed, valid), expected, name);
+  }
+
+  assert.throws(
+    () => diffPolicies(valid, { ...valid, defaultAction: "allow" }),
+    /New policy defaultAction must be "deny"/
+  );
+});
+
+test("CLI diff reports malformed policies as contextual validation errors", async () => {
+  const workspace = await mkdtemp(join(tmpdir(), "mcpperm-malformed-policy-"));
+  const oldPath = join(workspace, "old.json");
+  const newPath = join(workspace, "new.json");
+  const malformed = { schemaVersion: "mcpperm.policy.v1", tools: { read_file: { risk: "low" } } };
+
+  try {
+    await writeFile(oldPath, JSON.stringify(malformed));
+    await writeFile(newPath, JSON.stringify(malformed));
+    await assert.rejects(execFileAsync("node", ["dist/src/cli.js", "diff", oldPath, newPath]), (error: unknown) => {
+      const stderr = (error as { stderr: string }).stderr;
+      assert.match(stderr, /mcpperm: Old policy generatedAt must be a string/);
+      assert.doesNotMatch(stderr, /TypeError|Cannot read properties/);
+      return true;
+    });
+  } finally {
+    await rm(workspace, { recursive: true, force: true });
+  }
+});
+
 test("CLI writes policies and fails on high risk when requested", async () => {
   const workspace = await mkdtemp(join(tmpdir(), "mcpperm-test-"));
   const policyPath = join(workspace, "policy.json");
