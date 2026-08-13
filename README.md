@@ -112,18 +112,40 @@ Tools:
 
 ## Policy Model
 
-Generated policies use schema version `mcpperm.policy.v1`. They default to deny, mark high-risk tools as review-required, and keep per-category permission reasons so reviewers can decide whether to allow or reject each capability.
+Generated policies use schema version `mcpperm.policy.v1`. They default to deny,
+mark high-risk tools as review-required, and keep per-category permission reasons
+so reviewers can decide whether to allow or reject each capability.
+
+The `diff` command accepts complete generated v1 policies. Each policy must
+include a string `generatedAt`, a manifest with a non-empty string `name`,
+`defaultAction: "deny"`, a boolean `reviewRequired`, and a `tools` object. Every
+tool requires boolean `allowed` and `reviewRequired` fields, a `risk` of `low`,
+`medium`, or `high`, and a `permissions` object containing all six risk
+categories. Each permission requires a boolean `allowed`, a `risk` of `none`,
+`low`, `medium`, or `high`, and a string array `reasons`. An optional manifest
+`description` must be a string. Malformed old or new policies are rejected with
+a field-specific validation error before diffing.
 
 ```json
 {
   "schemaVersion": "mcpperm.policy.v1",
+  "generatedAt": "2026-05-31T00:00:00.000Z",
+  "manifest": { "name": "shell-server" },
   "defaultAction": "deny",
   "reviewRequired": true,
   "tools": {
     "exec_command": {
       "allowed": true,
       "risk": "high",
-      "reviewRequired": true
+      "reviewRequired": true,
+      "permissions": {
+        "filesystem": { "allowed": false, "risk": "none", "reasons": [] },
+        "shell": { "allowed": true, "risk": "high", "reasons": ["executes commands"] },
+        "network": { "allowed": false, "risk": "none", "reasons": [] },
+        "browser": { "allowed": false, "risk": "none", "reasons": [] },
+        "credentials": { "allowed": false, "risk": "none", "reasons": [] },
+        "messaging": { "allowed": false, "risk": "none", "reasons": [] }
+      }
     }
   }
 }
