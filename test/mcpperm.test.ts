@@ -57,6 +57,50 @@ test("normalizeManifest rejects duplicate and ambiguous tool identities", () => 
   );
 });
 
+test("normalizeManifest rejects non-object tools at their original indexes", () => {
+  assert.throws(
+    () => normalizeManifest({ tools: [null, { name: "valid" }, "invalid", 7] }),
+    /Manifest tools must be JSON objects; invalid tools at indexes 0, 2, 3/
+  );
+
+  assert.throws(
+    () => normalizeManifest({ tools: [null, false] }),
+    /Manifest tools must be JSON objects; invalid tools at indexes 0, 1/
+  );
+
+  assert.throws(
+    () => normalizeManifest({ tools: [{ name: "valid" }, null, { description: "missing identity" }] }),
+    /Manifest tools must be JSON objects; invalid tools at indexes 1/
+  );
+
+  assert.deepEqual(
+    normalizeManifest({ tools: [{ name: "valid" }] }).tools.map((tool) => tool.name),
+    ["valid"]
+  );
+});
+
+test("normalizeManifest preserves original indexes for invalid tool identities", () => {
+  assert.throws(
+    () => normalizeManifest({ tools: [{ name: "valid" }, { description: "missing identity" }] }),
+    /Manifest tools must define a non-empty name or id; invalid tools at indexes 1/
+  );
+});
+
+test("CLI rejects manifests containing non-object tools", async () => {
+  const cases = [
+    ['{"tools":[null,{"name":"valid"}]}', /invalid tools at indexes 0/],
+    ['{"tools":[null]}', /invalid tools at indexes 0/]
+  ] as const;
+
+  for (const [manifest, expected] of cases) {
+    await assert.rejects(execFileAsync("node", ["dist/src/cli.js", "inspect", manifest]), (error: unknown) => {
+      assert.equal((error as { code?: number }).code, 1);
+      assert.match((error as { stderr: string }).stderr, expected);
+      return true;
+    });
+  }
+});
+
 test("generatePolicy refuses duplicate tool identities in library summaries", () => {
   const summary = inspectManifest(normalizeManifest({ tools: [{ name: "same" }] }));
   summary.tools.push({ ...summary.tools[0]! });
