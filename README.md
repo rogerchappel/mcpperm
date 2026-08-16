@@ -161,12 +161,19 @@ npm run release:check
 
 Release tags must exactly equal `v` followed by the `version` in
 `package.json` (for example, package version `0.1.0` requires tag `v0.1.0`).
-The release workflow checks this invariant before packing the package or
-creating the GitHub release. You can exercise the same guard locally:
+The release workflow checks this invariant before packing and publishing the
+package or creating the GitHub release. You can exercise the same guard locally:
 
 ```sh
 node scripts/check-release-tag.mjs --tag v0.1.0 --version 0.1.0
 ```
+
+Publishing uses npm trusted publishing rather than a long-lived npm token. An
+npm trusted publisher must be configured for the `rogerchappel/mcpperm`
+package, repository, `release.yml` workflow, and GitHub environment (if one is
+later added). The workflow installs npm 11.5.1, publishes the public package
+with provenance, and only then creates the GitHub release. Run
+`npm run release:config:test` to verify that contract locally.
 
 Run repository validation:
 
@@ -210,7 +217,7 @@ npm run package:smoke
 npm run release:check
 ```
 
-Use `npm run package:smoke` or `npm pack --dry-run` to confirm the published tarball includes the support docs and runnable package contents.
+Use `npm run package:smoke` or `npm publish --dry-run` to confirm the published tarball includes the support docs and runnable package contents.
 
 ## Limitations
 
