@@ -47,14 +47,23 @@ function extractTools(raw: unknown): ManifestTool[] {
   ];
 
   for (const candidate of candidateLists) {
-    const records = asRecordArray(candidate);
-    if (records.length > 0) {
-      const invalidIndexes = records
+    if (Array.isArray(candidate) && candidate.length > 0) {
+      const invalidEntryIndexes = candidate
+        .map((tool, index) => (isRecord(tool) ? undefined : index))
+        .filter((index): index is number => index !== undefined);
+      if (invalidEntryIndexes.length > 0) {
+        throw new Error(
+          `Manifest tools must be JSON objects; invalid tools at indexes ${invalidEntryIndexes.join(", ")}.`
+        );
+      }
+
+      const records = candidate as Record<string, unknown>[];
+      const invalidIdentityIndexes = records
         .map((tool, index) => (asString(tool.name) ?? asString(tool.id) ? undefined : index))
         .filter((index): index is number => index !== undefined);
-      if (invalidIndexes.length > 0) {
+      if (invalidIdentityIndexes.length > 0) {
         throw new Error(
-          `Manifest tools must define a non-empty name or id; invalid tools at indexes ${invalidIndexes.join(", ")}.`
+          `Manifest tools must define a non-empty name or id; invalid tools at indexes ${invalidIdentityIndexes.join(", ")}.`
         );
       }
 

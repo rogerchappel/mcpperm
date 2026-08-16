@@ -80,6 +80,8 @@ before or after positional arguments.
 - `messaging`: email, Slack, Discord, Teams, SMS, publish, post, reply, inbox, or channel behavior.
 
 The profiler is intentionally conservative. It can flag false positives, and it cannot prove a manifest is truthful.
+Every entry in a manifest `tools` array must be a JSON object; malformed entries
+are rejected with their original array indexes instead of being silently omitted.
 
 ## Manifest Tool Identity
 
