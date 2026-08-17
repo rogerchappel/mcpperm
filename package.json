@@ -4,7 +4,7 @@
   "description": "Local-first MCP manifest permission profiler and policy generator.",
   "type": "module",
   "bin": {
-    "mcpperm": "./dist/src/cli.js"
+    "mcpperm": "dist/src/cli.js"
   },
   "main": "./dist/src/index.js",
   "exports": {
@@ -29,7 +29,8 @@
     "smoke": "npm run build && node scripts/smoke.mjs",
     "package:smoke": "npm run build && node scripts/package-smoke.mjs",
     "release:tag:test": "node --test scripts/check-release-tag.test.mjs",
-    "release:check": "npm run check && npm test && npm run release:tag:test && npm run smoke && npm run package:smoke",
+    "release:config:test": "node --test scripts/check-release-config.test.mjs",
+    "release:check": "npm run check && npm test && npm run release:tag:test && npm run release:config:test && npm run smoke && npm run package:smoke",
     "prepack": "npm run build"
   },
   "keywords": [
@@ -56,5 +57,9 @@
   "bugs": {
     "url": "https://github.com/rogerchappel/mcpperm/issues"
   },
-  "homepage": "https://github.com/rogerchappel/mcpperm#readme"
+  "homepage": "https://github.com/rogerchappel/mcpperm#readme",
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  }
 }

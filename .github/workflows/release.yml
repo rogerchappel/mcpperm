@@ -29,6 +29,8 @@ jobs:
           node-version: 22
           cache: npm
           registry-url: https://registry.npmjs.org
+      - name: Install npm with trusted publishing support
+        run: npm install --global npm@11.5.1
       - name: Install dependencies
         run: npm ci
       - name: Install ReleaseBox
@@ -43,6 +45,8 @@ jobs:
         run: npm run release:check
       - name: Build package
         run: npm pack
+      - name: Publish package to npm
+        run: npm publish --provenance --access public
       - name: Generate release notes
         run: node /tmp/releasebox/bin/releasebox.js notes . > RELEASE_NOTES.md
       - name: Create GitHub release
