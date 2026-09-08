@@ -26,6 +26,10 @@ Inspect a manifest:
 mcpperm inspect fixtures/filesystem-server.json
 ```
 
+Manifest and policy inputs may be file paths or inline JSON. An existing file
+takes precedence when its path begins with `{` or `[`, so such filenames do not
+need escaping or renaming.
+
 Emit machine-readable JSON:
 
 ```sh
@@ -40,6 +44,7 @@ mcpperm policy fixtures/shell-server.json --output mcpperm.policy.json
 
 The output path must be distinct from the input manifest; `mcpperm` rejects
 equivalent resolved paths before writing so the source manifest is preserved.
+Missing parent directories in the output path are created automatically.
 
 Compare two generated policies:
 

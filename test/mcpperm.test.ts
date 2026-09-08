@@ -101,6 +101,32 @@ test("CLI rejects manifests containing non-object tools", async () => {
   }
 });
 
+test("CLI treats brace- and bracket-prefixed filesystem inputs as files", async () => {
+  const workspace = await mkdtemp(join(tmpdir(), "mcpperm-prefixed-input-"));
+  const manifestName = "{manifest}.json";
+  const oldPolicyName = "[old].json";
+  const newPolicyName = "{new}.json";
+  const cliPath = join(process.cwd(), "dist/src/cli.js");
+
+  try {
+    await writeFile(join(workspace, manifestName), await readFile("fixtures/filesystem-server.json", "utf8"));
+    const policy = generatePolicy(inspectManifest(await loadFixture("docs-server.json")), "2026-05-31T00:00:00.000Z");
+    await writeFile(join(workspace, oldPolicyName), JSON.stringify(policy));
+    await writeFile(join(workspace, newPolicyName), JSON.stringify(policy));
+
+    const inspected = await execFileAsync("node", [cliPath, "inspect", manifestName, "--json"], { cwd: workspace });
+    assert.equal(JSON.parse(inspected.stdout).manifest.name, "filesystem-server");
+
+    const generated = await execFileAsync("node", [cliPath, "policy", manifestName], { cwd: workspace });
+    assert.equal(JSON.parse(generated.stdout).manifest.name, "filesystem-server");
+
+    const diffed = await execFileAsync("node", [cliPath, "diff", oldPolicyName, newPolicyName, "--json"], { cwd: workspace });
+    assert.deepEqual(JSON.parse(diffed.stdout), []);
+  } finally {
+    await rm(workspace, { recursive: true, force: true });
+  }
+});
+
 test("generatePolicy refuses duplicate tool identities in library summaries", () => {
   const summary = inspectManifest(normalizeManifest({ tools: [{ name: "same" }] }));
   summary.tools.push({ ...summary.tools[0]! });
@@ -231,6 +257,19 @@ test("CLI writes policies and fails on high risk when requested", async () => {
         return true;
       }
     );
+  } finally {
+    await rm(workspace, { recursive: true, force: true });
+  }
+});
+
+test("CLI creates missing parent directories for policy output", async () => {
+  const workspace = await mkdtemp(join(tmpdir(), "mcpperm-nested-output-"));
+  const policyPath = join(workspace, "nested", "reports", "policy.json");
+
+  try {
+    await execFileAsync("node", ["dist/src/cli.js", "policy", "fixtures/docs-server.json", "--output", policyPath]);
+    const policy = JSON.parse(await readFile(policyPath, "utf8")) as { manifest: { name: string } };
+    assert.equal(policy.manifest.name, "docs-server");
   } finally {
     await rm(workspace, { recursive: true, force: true });
   }

@@ -137,7 +137,17 @@ export async function readJsonInput(input: string): Promise<{ raw: unknown; sour
   const trimmed = input.trim();
 
   if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
-    return { raw: JSON.parse(trimmed) as unknown, sourceName: "inline-json" };
+    try {
+      const contents = await readFile(input, "utf8");
+      return { raw: JSON.parse(contents) as unknown, sourceName: input };
+    } catch (error: unknown) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (code !== "ENOENT" && code !== "ENAMETOOLONG") {
+        throw error;
+      }
+
+      return { raw: JSON.parse(trimmed) as unknown, sourceName: "inline-json" };
+    }
   }
 
   const contents = await readFile(input, "utf8");

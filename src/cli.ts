@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { realpath, writeFile } from "node:fs/promises";
+import { mkdir, realpath, writeFile } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
 import { diffPolicies, formatPolicyDiff, generatePolicy } from "./policy.js";
 import { formatSummary, inspectManifest } from "./risk.js";
@@ -90,14 +90,22 @@ function requireArgumentCount(command: string, positional: string[], expected: n
 async function resolvedPath(path: string): Promise<string> {
   try {
     return await realpath(path);
-  } catch {
-    return join(await realpath(dirname(path)), basename(path));
+  } catch (error: unknown) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+      throw error;
+    }
+
+    const parent = dirname(path);
+    if (parent === path) {
+      throw error;
+    }
+    return join(await resolvedPath(parent), basename(path));
   }
 }
 
 async function loadManifestSummary(input: string) {
   const { raw, sourceName } = await readJsonInput(input);
-  return inspectManifest(normalizeManifest(raw, sourceName));
+  return { summary: inspectManifest(normalizeManifest(raw, sourceName)), sourceName };
 }
 
 async function run(argv: string[]): Promise<number> {
@@ -113,7 +121,7 @@ async function run(argv: string[]): Promise<number> {
     const input = positional[0];
     if (!input) throw new Error("inspect requires <manifest-or-json>.");
 
-    const summary = await loadManifestSummary(input);
+    const { summary } = await loadManifestSummary(input);
     process.stdout.write(options.json ? `${JSON.stringify(summary, null, 2)}\n` : formatSummary(summary));
     return options.failOnHigh && summary.risk === "high" ? 2 : 0;
   }
@@ -123,17 +131,17 @@ async function run(argv: string[]): Promise<number> {
     const input = positional[0];
     if (!input) throw new Error("policy requires <manifest-or-json>.");
 
-    if (options.output && !input.trim().startsWith("{") && !input.trim().startsWith("[")) {
-      if ((await resolvedPath(input)) === (await resolvedPath(options.output))) {
+    const { summary, sourceName } = await loadManifestSummary(input);
+    if (options.output && sourceName !== "inline-json") {
+      if ((await resolvedPath(sourceName)) === (await resolvedPath(options.output))) {
         throw new Error("--output must not resolve to the policy input file.");
       }
     }
-
-    const summary = await loadManifestSummary(input);
     const policy = generatePolicy(summary);
     const output = `${JSON.stringify(policy, null, 2)}\n`;
 
     if (options.output) {
+      await mkdir(dirname(options.output), { recursive: true });
       await writeFile(options.output, output);
     } else {
       process.stdout.write(output);
