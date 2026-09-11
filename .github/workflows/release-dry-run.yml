@@ -27,7 +27,7 @@ jobs:
         run: |
           package_version="$(node --print "require('./package.json').version")"
           node scripts/check-release-tag.mjs --tag "v${package_version}" --version "$package_version"
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
