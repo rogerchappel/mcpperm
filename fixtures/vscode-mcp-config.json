@@ -1,0 +1,10 @@
+{
+  "servers": {
+    "workspace-tools": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["./server.js"],
+      "env": { "WORKSPACE": "." }
+    }
+  }
+}
