@@ -45,6 +45,15 @@ test("generatePolicy emits deny-by-default tool permissions", async () => {
   assert.equal(policy.tools.read_mentions?.permissions.messaging.risk, "medium");
 });
 
+test("VS Code MCP client configuration is explicitly rejected as a manifest", async () => {
+  const { raw, sourceName } = await readJsonInput(join("fixtures", "vscode-mcp-config.json"));
+  const normalized = normalizeManifest(raw, sourceName);
+
+  assert.equal(normalized.name, "vscode-mcp-config.json");
+  assert.deepEqual(normalized.tools, []);
+  assert.deepEqual(normalized.capabilities, []);
+});
+
 test("normalizeManifest rejects duplicate and ambiguous tool identities", () => {
   assert.throws(
     () => normalizeManifest({ tools: [{ name: "same" }, { id: "same" }] }),

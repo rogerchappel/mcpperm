@@ -96,6 +96,13 @@ present. The `inspect` and `policy` commands reject missing or duplicate tool
 identities instead of silently merging tools into one policy entry; the library
 applies the same validation during normalization and policy generation.
 
+Client configuration files are not server manifests. For example, the
+VS Code `servers` configuration shape in
+[`fixtures/vscode-mcp-config.json`](fixtures/vscode-mcp-config.json) does not
+expose a `tools` array; normalization therefore produces no tools rather than
+inferring permissions from client launch settings. Supply a server manifest
+that declares its tools for a meaningful profile.
+
 ## Example Output
 
 ```text
